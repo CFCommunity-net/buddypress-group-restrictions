@@ -115,12 +115,13 @@ function cfbgr_hide_join_group_button( $contents, $this, $before, $after ) {
 	// Get the restriction status of the group.
 	$status = groups_get_groupmeta( bp_get_group_id(), 'cf-buddypress-group-restrictions' );
 
-	if ( $status != $member_type ) {
+	// Bail if group isn't restricted.
+	if ( empty( $status ) )
+		return $contents;
 
-		// Empty the button contents if a restriction has been set.
-		if ( $status != '0' )
-			$contents = '';
-	}
+	// Empty the button contents if the member type data doesn't match the group restriction.
+	if ( $status != $member_type )
+		$contents = '';
 
 	return $contents;
 }
@@ -254,8 +255,8 @@ function cfbgr_process_data( $statuses ) {
 
 	if ( ! isset( $_POST['restriction-status'] ) ) {
 
-		// Update the group's meta.
-		groups_update_groupmeta( $bp->groups->new_group_id, 'cf-buddypress-group-restrictions', '0' );
+		// Delete the group's meta.
+		groups_delete_groupmeta( $bp->groups->new_group_id, 'cf-buddypress-group-restrictions' );
 
 	} else {
 
