@@ -103,8 +103,8 @@ function cfbgr_hide_join_group_button( $contents, $this, $before, $after ) {
 
 	if ( $status == '1' ) {
 
-		// Empty the button contents, if necessary.
-		if ( $member_type != 'has_cf' && ! $group_member->is_admin )
+		// Empty the button contents, if the member doesn't have CF.
+		if ( $member_type != 'has_cf' )
 			$contents = '';
 	}
 
