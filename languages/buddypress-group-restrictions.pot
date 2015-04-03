@@ -1,16 +1,73 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: BuddyPress Group Restrictions\n"
-"POT-Creation-Date: 2015-04-03 01:41+0100\n"
-"PO-Revision-Date: 2015-04-03 01:42+0100\n"
+"POT-Creation-Date: 2015-04-03 14:51+0100\n"
+"PO-Revision-Date: 2015-04-03 14:51+0100\n"
 "Last-Translator: \n"
 "Language-Team: \n"
+"Language: English\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Poedit 1.5.4\n"
 "X-Poedit-KeywordsList: __;_e;_x\n"
 "X-Poedit-Basepath: .\n"
-"Language: English\n"
 "X-Poedit-SourceCharset: UTF-8\n"
 "X-Poedit-SearchPath-0: .\n"
+
+#: buddypress-group-restrictions.php:142
+msgid "This group is only accessible to members with CF."
+msgstr ""
+
+#: buddypress-group-restrictions.php:147
+msgid "This group is only accessible to members with a child who has CF."
+msgstr ""
+
+#: buddypress-group-restrictions.php:152
+msgid ""
+"This group is only accessible to members with friends or family with CF."
+msgstr ""
+
+#: buddypress-group-restrictions.php:157
+msgid "This group is only accessible to members who work with someone with CF."
+msgstr ""
+
+#: buddypress-group-restrictions.php:161
+msgid "This group is only accessible to members with a partner with CF."
+msgstr ""
+
+#: buddypress-group-restrictions.php:165
+msgid "This group is only accessible to members who have indicated \"Other\"."
+msgstr ""
+
+#: buddypress-group-restrictions.php:169
+msgid "Anyone can join this group."
+msgstr ""
+
+#: buddypress-group-restrictions.php:193
+msgid "Only allow users who have CF to join the group."
+msgstr ""
+
+#: buddypress-group-restrictions.php:199
+msgid "Only allow users who have a child with CF to join the group."
+msgstr ""
+
+#: buddypress-group-restrictions.php:205
+msgid "Only allow users who have friends or family with CF to join the group."
+msgstr ""
+
+#: buddypress-group-restrictions.php:211
+msgid "Only allow users who work with someone with CF to join the group."
+msgstr ""
+
+#: buddypress-group-restrictions.php:216
+msgid "Only allow users who have a partner with CF to join the group."
+msgstr ""
+
+#: buddypress-group-restrictions.php:221
+msgid "Only allow users who have indicated \"Other\" to join the group."
+msgstr ""
+
+#: buddypress-group-restrictions.php:235
+msgid "Group Restrictions"
+msgstr ""
