@@ -89,6 +89,20 @@ function cfbgr_register_member_types() {
 add_action( 'bp_init', 'cfbgr_register_member_types' );
 
 /**
+ * Enqueue the script.
+ *
+ * @since 1.0.0
+ */
+function cfbgr_enqueue_js() {
+
+	if ( ! bp_is_group_create() )
+		return;
+
+	wp_enqueue_script( 'cfbgr-js', plugins_url( 'js/script.min.js', __FILE__ ), array( 'jquery' ), NULL, true );
+}
+add_action( 'wp_enqueue_scripts', 'cfbgr_enqueue_js' );
+
+/**
  * Output the join_group button, conditionally.
  *
  * @since 1.0.0
@@ -146,7 +160,7 @@ function cfbgr_group_restrictions_section() {
 	?>
 	<h4><?php _e( 'Group Restrictions', 'buddypress-group-restrictions' ); ?></h4>
 
-	<div class="checkbox">
+	<div id="group-restrictions" class="checkbox">
 		<label>
 			<input type="checkbox" name="restriction-status" id="restriction-status" value="1" />
 			<strong><?php _e( 'Only allow users who have CF to join the group.', 'buddypress-group-restrictions' ); ?></strong>
