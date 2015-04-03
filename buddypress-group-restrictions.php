@@ -115,11 +115,10 @@ function cfbgr_hide_join_group_button( $contents, $this, $before, $after ) {
 	// Get the restriction status of the group.
 	$status = groups_get_groupmeta( bp_get_group_id(), 'cf-buddypress-group-restrictions' );
 
-	if ( $status == '1' ) {
+	if ( $status != $member_type ) {
 
-		// Empty the button contents, if the member doesn't have CF.
-		if ( $member_type != 'has_cf' )
-			$contents = '';
+		// Empty the button contents.
+		$contents = '';
 	}
 
 	return $contents;
@@ -135,11 +134,42 @@ function cfbgr_add_notice_to_single_group() {
 
 	$status = groups_get_groupmeta( bp_get_group_id(), 'cf-buddypress-group-restrictions' );
 
-	if ( $status != '1' )
-		return;
+	switch ( $status ) {
+		case 'has_cf':
+
+			$notice = __( 'This group is only accessible to members with CF.', 'buddypress-group-restrictions' );
+			break;
+
+		case 'has_cf_child':
+
+			$notice = __( 'This group is only accessible to members with a child who has CF.', 'buddypress-group-restrictions' );
+			break;
+
+		case 'has_cf_friend_family':
+
+			$notice = __( 'This group is only accessible to members with friends or family with CF.', 'buddypress-group-restrictions' );
+			break;
+
+		case 'has_cf_work':
+
+			$notice = __( 'This group is only accessible to members who work with someone with CF.', 'buddypress-group-restrictions' );
+			break;
+
+		case 'has_cf_partner':
+			$notice = __( 'This group is only accessible to members with a partner with CF.', 'buddypress-group-restrictions' );
+			break;
+
+		case 'has_cf_other':
+			$notice = __( 'This group is only accessible to members who have indicated "Other".', 'buddypress-group-restrictions' );
+			break;
+
+		default:
+			$notice = __( 'Anyone can join this group.', 'buddypress-group-restrictions' );
+			break;
+	}
 
 	?>
-	<p><?php _e( 'This group is only accessible to members with CF.', 'buddypress-group-restrictions' ); ?></p>
+	<p><?php echo $notice; ?></p>
 	<?php
 }
 add_action( 'bp_before_group_header_meta', 'cfbgr_add_notice_to_single_group' );
@@ -153,17 +183,49 @@ function cfbgr_group_restrictions_section() {
 
 	$member_type = bp_get_member_type( bp_loggedin_user_id() );
 
-	// Don't show this option for members without CF.
-	if ( $member_type != 'has_cf' )
-		return;
+	switch ( $member_type ) {
+		case 'has_cf':
+
+			$label = __( 'Only allow users who have CF to join the group.', 'buddypress-group-restrictions' );
+			$value = 'has_cf';
+			break;
+
+		case 'has_cf_child':
+
+			$label = __( 'Only allow users who have a child with CF to join the group.', 'buddypress-group-restrictions' );
+			$value = 'has_cf_child';
+			break;
+
+		case 'has_cf_friend_family':
+
+			$label = __( 'Only allow users who have friends or family with CF to join the group.', 'buddypress-group-restrictions' );
+			$value = 'has_cf_friend_family';
+			break;
+
+		case 'has_cf_work':
+
+			$label = __( 'Only allow users who work with someone with CF to join the group.', 'buddypress-group-restrictions' );
+			$value = 'has_cf_work';
+			break;
+
+		case 'has_cf_partner':
+			$label = __( 'Only allow users who have a partner with CF to join the group.', 'buddypress-group-restrictions' );
+			$value = 'has_cf_partner';
+			break;
+
+		case 'has_cf_other':
+			$label = __( 'Only allow users who have indicated "Other" to join the group.', 'buddypress-group-restrictions' );
+			$value = 'has_cf_other';
+			break;
+	}
 
 	?>
 	<h4><?php _e( 'Group Restrictions', 'buddypress-group-restrictions' ); ?></h4>
 
 	<div id="group-restrictions" class="checkbox">
 		<label>
-			<input type="checkbox" name="restriction-status" id="restriction-status" value="1" />
-			<strong><?php _e( 'Only allow users who have CF to join the group.', 'buddypress-group-restrictions' ); ?></strong>
+			<input type="checkbox" name="restriction-status" id="restriction-status" value="<?php echo $value; ?>" />
+			<strong><?php echo $label; ?></strong>
 		</label>
 	</div>
 	<?php
@@ -177,14 +239,15 @@ add_action( 'bp_before_group_settings_creation_step', 'cfbgr_group_restrictions_
  */
 function cfbgr_process_data( $statuses ) {
 
-	// 1 indicates the group is restricted to members with CF.
-	if ( '1' == $_POST['restriction-status'] ) {
+	if ( ! isset( $_POST['restriction-status'] ) )
+		return;
 
-		$bp = buddypress();
+	$bp = buddypress();
 
-		// Update the group's meta.
-		groups_update_groupmeta( $bp->groups->new_group_id, 'cf-buddypress-group-restrictions', '1' );
-	}
+	$string = sanitize_text_field( $_POST['restriction-status'] );
+
+	// Update the group's meta.
+	groups_update_groupmeta( $bp->groups->new_group_id, 'cf-buddypress-group-restrictions', $string );
 
 	// Do nothing with $statuses, just return it.
 	return $statuses;
