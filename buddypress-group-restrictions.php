@@ -184,6 +184,8 @@ function cfbgr_group_restrictions_section() {
 
 	$member_type = bp_get_member_type( bp_loggedin_user_id() );
 
+	$output = true;
+
 	switch ( $member_type ) {
 		case 'has_cf':
 
@@ -218,7 +220,15 @@ function cfbgr_group_restrictions_section() {
 			$label = __( 'Only allow users who have indicated "Other" to join the group.', 'buddypress-group-restrictions' );
 			$value = 'has_cf_other';
 			break;
+
+		default:
+			$output = false;
+			break;
 	}
+
+	// Bail in cases where the logged in user is none of the above.
+	if ( $output === false )
+		return;
 
 	?>
 	<h4><?php _e( 'Group Restrictions', 'buddypress-group-restrictions' ); ?></h4>
