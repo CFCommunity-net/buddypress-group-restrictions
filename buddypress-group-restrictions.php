@@ -3,8 +3,9 @@
  * Plugin Name: BuddyPress Group Restrictions
  * Plugin URI: https://github.com/CFCommunity-net/buddypress-group-restrictions
  * Description: Restrict group access according to member type.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Henry Wright
+ * Contributors: imath, bowromir
  * Author URI: http://about.me/henrywright
  * Text Domain: buddypress-group-restrictions
  * Domain Path: /languages/
@@ -17,257 +18,94 @@
  */
 
 // Exit if accessed directly.
-if ( ! defined( 'ABSPATH' ) )
-	exit;
+defined( 'ABSPATH' ) || exit;
 
 /**
- * Load the plugin's textdomain.
- * 
- * @since 1.0.0
- */
-function cfbgr_i18n() {
-
-	load_plugin_textdomain( 'buddypress-group-restrictions', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
-}
-add_action( 'plugins_loaded', 'cfbgr_i18n' );
-
-/**
- * Register member types.
+ * Main class
  *
- * @since 1.0.0
+ * Some general advices:
+ * - BuddyPress plugins should always load hooking to bp_include  @see line 104
+ * - As this plugin is only playing with the groups component, do not include any
+ *   file or run anything before we totally sure the component is active
+ * - Always test a plugin having in wp-config.php:
+ *   - define( 'WP_DEBUG', true );
+ *   - define( 'SCRIPT_DEBUG', true);
+ * - Minify the scripts / generate the pot at the very last moment.
+ * - Make sure to enqueue scripts only when needed. @see cfbgr_is_restriction_js()
  */
-function cfbgr_register_member_types() {
+class CF_BG_Restrictions {
 
-	bp_register_member_type( 'has_cf', array(
+	public static function start() {
+		$bp = buddypress();
 
-		'labels' => array(
-			'name' => 'Has CF',
-			'singular_name' => 'Has CF'
-		)
-	) );
+		// Plugin is requiring the groups component
+		if ( ! bp_is_active( 'groups' ) ) {
+			return;
+		}
 
-	bp_register_member_type( 'has_cf_child', array(
+		// Extending the groups component
+		if ( empty( $bp->groups->restrictions ) ) {
+			$bp->groups->restrictions = new self;
+		}
 
-		'labels' => array(
-			'name' => 'Child CF',
-			'singular_name' => 'Child CF'
-		)
-	) );
-
-	bp_register_member_type( 'has_cf_friend_family', array(
-
-		'labels' => array(
-			'name' => 'Family or friend CF',
-			'singular_name' => 'Family or friend CF'
-		)
-	) );
-
-	bp_register_member_type( 'has_cf_work', array(
-
-		'labels' => array(
-			'name' => 'Work CF',
-			'singular_name' => 'Work CF'
-		)
-	) );
-
-	bp_register_member_type( 'has_cf_partner', array(
-
-		'labels' => array(
-			'name' => 'Partner CF',
-			'singular_name' => 'Partner CF'
-		)
-	) );
-
-	bp_register_member_type( 'has_cf_other', array(
-
-		'labels' => array(
-			'name' => 'Other',
-			'singular_name' => 'Other'
-		)
-	) );
-}
-add_action( 'bp_init', 'cfbgr_register_member_types' );
-
-/**
- * Enqueue the script.
- *
- * @since 1.0.0
- */
-function cfbgr_enqueue_js() {
-
-	if ( ! bp_is_group_create() )
-		return;
-
-	wp_enqueue_script( 'cfbgr-js', plugins_url( 'js/script.min.js', __FILE__ ), array( 'jquery' ), NULL, true );
-}
-add_action( 'wp_enqueue_scripts', 'cfbgr_enqueue_js' );
-
-/**
- * Output the join_group button, conditionally.
- *
- * @since 1.0.0
- */
-function cfbgr_hide_join_group_button( $contents, $this, $before, $after ) {
-
-	// Get member type data.
-	$member_type = bp_get_member_type( bp_loggedin_user_id() );
-
-	// Get the restriction status of the group.
-	$status = groups_get_groupmeta( bp_get_group_id(), 'cf-buddypress-group-restrictions' );
-
-	// Bail if group isn't restricted.
-	if ( empty( $status ) )
-		return $contents;
-
-	// Empty the button contents if the member type data doesn't match the group restriction.
-	if ( $status != $member_type )
-		$contents = '';
-
-	return $contents;
-}
-add_filter( 'bp_button_groups_join_group', 'cfbgr_hide_join_group_button', 10, 4 );
-
-/**
- * Output a notice on the single group page.
- *
- * @since 1.0.0
- */
-function cfbgr_add_notice_to_single_group() {
-
-	$status = groups_get_groupmeta( bp_get_group_id(), 'cf-buddypress-group-restrictions' );
-
-	switch ( $status ) {
-		case 'has_cf':
-
-			$notice = __( 'This group is only accessible to members with CF.', 'buddypress-group-restrictions' );
-			break;
-
-		case 'has_cf_child':
-
-			$notice = __( 'This group is only accessible to members with a child who has CF.', 'buddypress-group-restrictions' );
-			break;
-
-		case 'has_cf_friend_family':
-
-			$notice = __( 'This group is only accessible to members with friends or family with CF.', 'buddypress-group-restrictions' );
-			break;
-
-		case 'has_cf_work':
-
-			$notice = __( 'This group is only accessible to members who work with someone with CF.', 'buddypress-group-restrictions' );
-			break;
-
-		case 'has_cf_partner':
-			$notice = __( 'This group is only accessible to members with a partner with CF.', 'buddypress-group-restrictions' );
-			break;
-
-		case 'has_cf_other':
-			$notice = __( 'This group is only accessible to members who have indicated "Other".', 'buddypress-group-restrictions' );
-			break;
-
-		default:
-			$notice = __( 'Anyone can join this group.', 'buddypress-group-restrictions' );
-			break;
+		return $bp->groups->restrictions;
 	}
 
-	?>
-	<p><?php echo $notice; ?></p>
-	<?php
-}
-add_action( 'bp_before_group_header_meta', 'cfbgr_add_notice_to_single_group' );
+	public function __construct() {
+		// In case the class is called like new CF_BG_Restrictions()
+		if ( ! bp_is_active( 'groups' ) ) {
+			return;
+		}
 
-/**
- * Output the settings section.
- *
- * @since 1.0.0
- */
-function cfbgr_group_restrictions_section() {
-
-	$member_type = bp_get_member_type( bp_loggedin_user_id() );
-
-	$output = true;
-
-	switch ( $member_type ) {
-		case 'has_cf':
-
-			$label = __( 'Only allow users who have CF to join the group.', 'buddypress-group-restrictions' );
-			$value = 'has_cf';
-			break;
-
-		case 'has_cf_child':
-
-			$label = __( 'Only allow users who have a child with CF to join the group.', 'buddypress-group-restrictions' );
-			$value = 'has_cf_child';
-			break;
-
-		case 'has_cf_friend_family':
-
-			$label = __( 'Only allow users who have friends or family with CF to join the group.', 'buddypress-group-restrictions' );
-			$value = 'has_cf_friend_family';
-			break;
-
-		case 'has_cf_work':
-
-			$label = __( 'Only allow users who work with someone with CF to join the group.', 'buddypress-group-restrictions' );
-			$value = 'has_cf_work';
-			break;
-
-		case 'has_cf_partner':
-			$label = __( 'Only allow users who have a partner with CF to join the group.', 'buddypress-group-restrictions' );
-			$value = 'has_cf_partner';
-			break;
-
-		case 'has_cf_other':
-			$label = __( 'Only allow users who have indicated "Other" to join the group.', 'buddypress-group-restrictions' );
-			$value = 'has_cf_other';
-			break;
-
-		default:
-			$output = false;
-			break;
+		$this->setup_globals();
+		$this->includes();
+		$this->setup_hooks();
 	}
 
-	// Bail in cases where the logged in user is none of the above.
-	if ( $output === false )
-		return;
+	public function setup_globals() {
+		$this->version      = '1.0.1';
 
-	?>
-	<h4><?php _e( 'Group Restrictions', 'buddypress-group-restrictions' ); ?></h4>
-
-	<div id="group-restrictions" class="checkbox">
-		<label>
-			<input type="checkbox" name="restriction-status" id="restriction-status" value="<?php echo $value; ?>" />
-			<strong><?php echo $label; ?></strong>
-		</label>
-	</div>
-	<?php
-}
-add_action( 'bp_before_group_settings_creation_step', 'cfbgr_group_restrictions_section' );
-
-/**
- * Process restriction data captured in the form.
- *
- * @since 1.0.0
- */
-function cfbgr_process_data( $statuses ) {
-
-	$bp = buddypress();
-
-	if ( ! isset( $_POST['restriction-status'] ) ) {
-
-		// Delete the group's meta.
-		groups_delete_groupmeta( $bp->groups->new_group_id, 'cf-buddypress-group-restrictions' );
-
-	} else {
-
-		$string = sanitize_text_field( $_POST['restriction-status'] );
-
-		// Update the group's meta.
-		groups_update_groupmeta( $bp->groups->new_group_id, 'cf-buddypress-group-restrictions', $string );
-
+		$this->domain       = 'buddypress-group-restrictions';
+		$this->file         = __FILE__;
+		$this->basename     = plugin_basename( $this->file );
+		$this->plugin_dir   = plugin_dir_path( $this->file );
+		$this->plugin_url   = plugin_dir_url ( $this->file );
+		$this->lang_dir     = trailingslashit( $this->plugin_dir   . 'languages' );
+		$this->includes_dir = trailingslashit( $this->plugin_dir   . 'includes'  );
+		$this->js_url       = trailingslashit( $this->plugin_url   . 'js' );
 	}
 
-	// Do nothing with $statuses, just return it.
-	return $statuses;
+	public function includes() {
+		require( $this->includes_dir . 'functions.php' );
+
+		if ( ! class_exists( 'BP_MT_Extended' ) ) {
+			require( $this->includes_dir . 'register.php' );
+		}
+	}
+
+	// Translations for now...
+	public function setup_hooks() {
+		add_action( 'bp_init', array( $this, 'load_textdomain' ), 5 );
+	}
+
+	/**
+	 * Loads the translation files
+	 */
+	public function load_textdomain() {
+		// Traditional WordPress plugin locale filter
+		$locale        = apply_filters( 'plugin_locale', get_locale(), $this->domain );
+		$mofile        = sprintf( '%1$s-%2$s.mo', $this->domain, $locale );
+
+		// Setup paths to a buddypress-group-restrictions subfolder in WP LANG DIR
+		$mofile_global = WP_LANG_DIR . '/buddypress-group-restrictions/' . $mofile;
+
+		// Look in global /wp-content/languages/buddypress-group-restrictions folder
+		if ( ! load_textdomain( $this->domain, $mofile_global ) ) {
+
+			// Look in local /wp-content/plugins/buddypress-group-restrictions/languages/ folder
+			// or /wp-content/languages/plugins/
+			load_plugin_textdomain( $this->domain, false, basename( plugin_dir_path( $this->file ) ) . '/languages' );
+		}
+	}
 }
-add_filter( 'groups_allowed_invite_status', 'cfbgr_process_data' );
+add_action( 'bp_include', array( 'CF_BG_Restrictions', 'start' ) );
