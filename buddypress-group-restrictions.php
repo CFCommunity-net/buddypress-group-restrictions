@@ -117,8 +117,9 @@ function cfbgr_hide_join_group_button( $contents, $this, $before, $after ) {
 
 	if ( $status != $member_type ) {
 
-		// Empty the button contents.
-		$contents = '';
+		// Empty the button contents if a restriction has been set.
+		if ( $status != '0' )
+			$contents = '';
 	}
 
 	return $contents;
@@ -239,15 +240,21 @@ add_action( 'bp_before_group_settings_creation_step', 'cfbgr_group_restrictions_
  */
 function cfbgr_process_data( $statuses ) {
 
-	if ( ! isset( $_POST['restriction-status'] ) )
-		return;
-
 	$bp = buddypress();
 
-	$string = sanitize_text_field( $_POST['restriction-status'] );
+	if ( ! isset( $_POST['restriction-status'] ) ) {
 
-	// Update the group's meta.
-	groups_update_groupmeta( $bp->groups->new_group_id, 'cf-buddypress-group-restrictions', $string );
+		// Update the group's meta.
+		groups_update_groupmeta( $bp->groups->new_group_id, 'cf-buddypress-group-restrictions', '0' );
+
+	} else {
+
+		$string = sanitize_text_field( $_POST['restriction-status'] );
+
+		// Update the group's meta.
+		groups_update_groupmeta( $bp->groups->new_group_id, 'cf-buddypress-group-restrictions', $string );
+
+	}
 
 	// Do nothing with $statuses, just return it.
 	return $statuses;
