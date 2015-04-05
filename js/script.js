@@ -52,7 +52,6 @@
 		if ( 'undefined' !== target.html() ) {
 			buddypressInfo[ $( this ).val() ] = target.html();
 		}
-		console.log( buddypressInfo );
 	} );
 
 	if ( 'hidden' === currentStatus.val() ) {
@@ -100,7 +99,6 @@
 					$( this ).prop( 'checked', false );
 				}
 			} );
-
 
 			target.html(
 				_cfbGRTypes[ $( this ).val() ][ $( 'input[name=group-status]:checked' ).val() ]

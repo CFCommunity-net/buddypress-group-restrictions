@@ -2,22 +2,73 @@
 /**
  * BuddyPress Group Restrictions
  *
- * The member types will be set by another plugin
- * this file will only load if the plugin is not available
- *
  * @package BuddyPress Group Restrictions
- * @subpackage debug
+ * @subpackage register
  */
 
 // Exit if accessed directly.
 defined( 'ABSPATH' ) || exit;
 
 /**
+ * Register the xProfile field member types type.
+ *
+ * @since 1.0.0
+ */
+function cfbgr_register_xprofile_field_type( $fields = array() ) {
+	$fields[ 'member_type' ] = 'CF_BG_Member_Type_Field_Type';
+	return $fields;
+}
+add_filter( 'bp_xprofile_get_field_types', 'cfbgr_register_xprofile_field_type', 10, 1 );
+
+/**
  * Register member types.
+ *
+ * If the field type is set and has options. These options will dynamically build the member type
+ * Use the name to set options into the xProfile Field Admin UI eg: Has CF
  *
  * @since 1.0.0
  */
 function cfbgr_register_member_types() {
+	$saved_option = (int) bp_get_option( 'cfbgr_xfield_id', 0 );
+
+	if ( empty( $saved_option ) ) {
+		return;
+	}
+
+	$field = xprofile_get_field( $saved_option );
+
+	// This case means the option was not deleted when it oughts to be
+	if( empty( $field->type_obj ) || ! is_a( $field->type_obj, 'CF_BG_Member_Type_Field_Type' ) ) {
+		bp_delete_option( 'cfbgr_xfield_id' );
+		return;
+	}
+
+	// Object cache this field
+	buddypress()->groups->restrictions->member_type_field = $field;
+
+	$options = $field->get_children( true );
+
+	if ( ! is_array( $options ) ) {
+		return;
+	}
+
+	foreach ( $options as $member_type ) {
+
+		if ( empty( $member_type->name ) ) {
+			continue;
+		}
+
+		bp_register_member_type( sanitize_key( $member_type->name ), array(
+			'labels' => array(
+				'name' => $member_type->name,
+			),
+		) );
+	}
+}
+add_action( 'bp_init', 'cfbgr_register_member_types' );
+
+
+/*function cfbgr_register_member_types() {
 
 	bp_register_member_type( 'has_cf', array(
 
@@ -67,4 +118,4 @@ function cfbgr_register_member_types() {
 		)
 	) );
 }
-add_action( 'bp_init', 'cfbgr_register_member_types' );
+add_action( 'bp_init', 'cfbgr_register_member_types' );*/

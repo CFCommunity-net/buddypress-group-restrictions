@@ -9,6 +9,8 @@
 // Exit if accessed directly.
 defined( 'ABSPATH' ) || exit;
 
+/** Utilies *******************************************************************/
+
 function cfbgr_get_version() {
 	return buddypress()->groups->restrictions->version;
 }
@@ -20,6 +22,8 @@ function cfbgr_get_plugin_dir() {
 function cfbgr_get_js_url() {
 	return buddypress()->groups->restrictions->js_url;
 }
+
+/** Groups functions **********************************************************/
 
 /**
  * Restrict access to a group regarding its 'member type'
@@ -111,42 +115,50 @@ function cfbgr_is_restriction_js() {
  * @since 1.0.0
  */
 function cfbgr_enqueue_js() {
+	$bp = buddypress();
 	$min = defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ? '' : '.min';
 
 	if ( ! cfbgr_is_restriction_js() ) {
 		return;
 	}
 
-	wp_enqueue_script ( 'cfbgr-js', cfbgr_get_js_url() . "script{$min}.js", array( 'jquery' ), cfbgr_get_version(), true );
+	if ( is_null( $bp->groups->restrictions->member_type_field ) ) {
+		$saved_option = (int) bp_get_option( 'cfbgr_xfield_id', 0 );
 
-	// We should try a way to improve this using an option and an UI to let the admin set the messages
-	// It's not great to maintain...
-	wp_localize_script( 'cfbgr-js', '_cfbGRTypes', array(
-		'has_cf'               => array(
-			'public'  => __( 'Only allow users who have CF to join the group.', 'buddypress-group-restrictions' ),
-			'private' => __( 'Only allow users who have CF to request membership to the group.', 'buddypress-group-restrictions' ),
-		),
-		'has_cf_child'         => array(
-			'public'  => __( 'Only allow users who have a child with CF to join the group.', 'buddypress-group-restrictions' ),
-			'private' => __( 'Only allow users who have a child with CF to request membership to the group.', 'buddypress-group-restrictions' ),
-		),
-		'has_cf_friend_family' => array(
-			'public'  => __( 'Only allow users who have friends or family with CF to join the group.', 'buddypress-group-restrictions' ),
-			'private' => __( 'Only allow users who have friends or family with CF to request membership to the group.', 'buddypress-group-restrictions' ),
-		),
-		'has_cf_work'          => array(
-			'public'  => __( 'Only allow users who work with someone with CF to join the group.', 'buddypress-group-restrictions' ),
-			'private' => __( 'Only allow users who work with someone with CF to request membership to the group.', 'buddypress-group-restrictions' ),
-		),
-		'has_cf_partner'       => array(
-			'public'  => __( 'Only allow users who have a partner with CF to join the group.', 'buddypress-group-restrictions' ),
-			'private' => __( 'Only allow users who have a partner with CF to request membership to the group.', 'buddypress-group-restrictions' ),
-		),
-		'has_cf_other'         => array(
-			'public'  => __( 'Only allow users who have indicated "Other" to join the group.', 'buddypress-group-restrictions' ),
-			'private' => __( 'Only allow users who have indicated "Other" to request membership to the group.', 'buddypress-group-restrictions' ),
-		),
-	) );
+		if ( empty( $saved_option ) ) {
+			return;
+		}
+
+		$field = xprofile_get_field( $saved_option );
+	} else {
+		$field = $bp->groups->restrictions->member_type_field;
+	}
+
+	$options = $field->get_children( true );
+
+	if ( ! is_array( $options ) ) {
+		return;
+	}
+
+	$script_data = array();
+	foreach ( $options as $option ) {
+		// Default description
+		// Use the xProfile API to set customs in the textareas of the member type field
+		$description = sprintf( __( 'Only allow users having the type: %s', 'buddypress-group-restrictions' ), $option->name );
+
+		if ( ! empty( $option->description ) ) {
+			$description = $option->description;
+		}
+
+		$script_data[ sanitize_key($option->name) ] = array(
+			'public'  => sprintf( __( '%s to join the group.', 'buddypress-group-restrictions' ), $description ),
+			'private' => sprintf( __( '%s to request membership to the group.', 'buddypress-group-restrictions' ), $description ),
+		);
+	}
+
+
+	wp_enqueue_script ( 'cfbgr-js', cfbgr_get_js_url() . "script{$min}.js", array( 'jquery' ), cfbgr_get_version(), true );
+	wp_localize_script( 'cfbgr-js', '_cfbGRTypes', $script_data );
 }
 add_action( 'wp_enqueue_scripts', 'cfbgr_enqueue_js' );
 
@@ -251,3 +263,176 @@ function cfbgr_process_data() {
 }
 add_action( 'groups_create_group_step_save_group-settings', 'cfbgr_process_data' );
 add_action( 'groups_group_settings_edited', 'cfbgr_process_data' );
+
+/** xProfile API Tricks! ******************************************************/
+
+/**
+ * Each time a field is saved, BuddyPress deletes the options to recreate them
+ *
+ * So we need to wait till the options are recreated to save their descriptions.
+ *
+ * @param  BP_XProfile_Field $field the member type field object
+ * @global $wpdb WP DB API
+ */
+function cfbgr_update_options_description( $field = null ) {
+	global $wpdb;
+
+	// Get the the Member types xProfile field
+	$saved_option = (int) bp_get_option( 'cfbgr_xfield_id', 0 );
+
+	if (  empty( $field->id ) || empty( $saved_option ) || (int) $field->id !== $saved_option ) {
+		return;
+	}
+
+	if ( empty( $field->type_obj->descriptions ) ) {
+		return;
+	}
+
+	$options = $field->get_children( true );
+
+	if ( ! empty( $options ) && is_array( $options ) ) {
+
+		foreach( $options as $option ) {
+			if ( ! empty( $field->type_obj->descriptions[ $option->name ] ) ) {
+				$wpdb->update(
+					// Profile fields table
+					buddypress()->profile->table_name_fields,
+					array(
+						'description' => stripslashes( wp_kses( $field->type_obj->descriptions[ $option->name ], array() ) ),
+					),
+					array(
+						'id' => $option->id,
+					),
+					// Data sanitization format
+					array(
+						'%s',
+					),
+					// WHERE sanitization format
+					array(
+						'%d',
+						'%s',
+					)
+				);
+			}
+		}
+
+		// Make sure to update only once !
+		unset( $field->type_obj->descriptions );
+	}
+}
+add_action( 'xprofile_field_after_save', 'cfbgr_update_options_description', 10, 1 );
+
+/**
+ * Save the profile field that will hold the member types
+ *
+ * @param  BP_XProfile_Field $field
+ */
+function cfbgr_set_xprofile_member_types_field( $field = null ) {
+	if ( empty( $field->id ) ) {
+		return;
+	}
+
+	$saved_option = (int) bp_get_option( 'cfbgr_xfield_id', 0 );
+
+	if ( ! empty( $saved_option ) && $saved_option !== (int) $field->id ) {
+		return;
+	}
+
+	if ( ! empty( $saved_option ) && $saved_option === (int) $field->id ) {
+		if ( 'member_type' !== $field->type ) {
+			bp_delete_option( 'cfbgr_xfield_id' );
+		}
+	}
+
+	// First time
+	if ( empty( $saved_option ) && 'member_type' === $field->type ) {
+		bp_update_option( 'cfbgr_xfield_id', (int) $field->id );
+	}
+}
+add_action( 'xprofile_fields_saved_field', 'cfbgr_set_xprofile_member_types_field', 10, 1 );
+
+
+function cfbgr_saved_xprofile_fields( $field = null ) {
+	$bp = buddypress();
+
+	if ( ! empty( $field->field_id ) ) {
+		$bp->groups->restrictions->xprofile_fields['saved'][] = $field->field_id;
+	}
+}
+
+/**
+ * Intercept errors possibly caused by the member type xProfile field
+ *
+ * As this field is never saved into the xProfile field data table, BuddyPress
+ * is logically generating an error. Here we're checking it's the only one and if
+ * so trick BuddyPress feedback messages to inform everything went good.
+ *
+ * @param  int $user_id
+ * @param  array $posted_field_ids
+ * @param  bool $errors
+ */
+function cfbgr_updated_xprofile_fields( $user_id, $posted_field_ids, $errors ) {
+	$bp = buddypress();
+
+	if ( empty( $errors ) ) {
+		return;
+	}
+
+	// No errors with regular fields, so we can trick the error message are our field will constantly generate an error (which is not!)
+	if ( ! array_diff( $bp->groups->restrictions->xprofile_fields['saved'], $bp->groups->restrictions->xprofile_fields['to_save'] ) ) {
+
+		if ( is_admin() ) {
+			$redirect_to = remove_query_arg( array( 'action', 'error', 'updated', 'spam', 'ham', 'delete_avatar' ), $_SERVER['REQUEST_URI'] );
+			$redirect_to = add_query_arg( 'updated', '1', $redirect_to );
+		} else {
+			bp_core_add_message( __( 'Changes saved.', 'buddypress-group-restrictions' ) );
+			$redirect_to = trailingslashit( bp_displayed_user_domain() . buddypress()->profile->slug . '/edit/group/' . bp_action_variable( 1 ) );
+		}
+
+		bp_core_redirect( $redirect_to );
+	}
+}
+add_action( 'xprofile_updated_profile', 'cfbgr_updated_xprofile_fields', 10, 3 );
+
+/**
+ * Each time a field will be saved we need to check if it's
+ * not our member type field type...
+ *
+ * @param  BP_XProfile_Field $field
+ */
+function cfbgr_save_xprofile_as_member_type( $field = null ) {
+	$bp = buddypress();
+
+	if ( empty( $bp->groups->restrictions->xprofile_fields ) ) {
+		$bp->groups->restrictions->xprofile_fields = array( 'to_save' => array() );
+	}
+
+	if ( ! empty( $field->user_id ) && ! empty( $field->field_id ) ) {
+
+		$saved_option = (int) bp_get_option( 'cfbgr_xfield_id', 0 );
+
+		if ( ! empty( $saved_option ) && $saved_option === (int) $field->field_id ) {
+			$member_type = maybe_unserialize( $field->value );
+
+			if ( is_array( $member_type ) ) {
+				$member_type = array_pop( $member_type );
+			}
+
+			// Save the member type for the user.
+			bp_set_member_type( $field->user_id, $member_type );
+
+			// BuddyPress: i make you believe this field is not valid
+			// so that you don't save it as a profile field
+			add_filter( 'xprofile_data_is_valid_field', '__return_false' );
+		} else {
+			$bp->groups->restrictions->xprofile_fields['to_save'][] = $field->field_id;
+
+			// We need to intercept the regular fields
+			add_action( 'xprofile_data_after_save', 'cfbgr_saved_xprofile_fields', 10, 1 );
+
+			// This fields will take the regular validation road
+			remove_filter( 'xprofile_data_is_valid_field', '__return_false' );
+		}
+	}
+}
+add_action( 'xprofile_data_before_save', 'cfbgr_save_xprofile_as_member_type', 10, 1 );

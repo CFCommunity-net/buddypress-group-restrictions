@@ -38,8 +38,8 @@ class CF_BG_Restrictions {
 	public static function start() {
 		$bp = buddypress();
 
-		// Plugin is requiring the groups component
-		if ( ! bp_is_active( 'groups' ) ) {
+		// Plugin is requiring the groups & xProfile components
+		if ( ! bp_is_active( 'groups' ) || ! bp_is_active( 'xprofile' ) ) {
 			return;
 		}
 
@@ -53,7 +53,12 @@ class CF_BG_Restrictions {
 
 	public function __construct() {
 		// In case the class is called like new CF_BG_Restrictions()
-		if ( ! bp_is_active( 'groups' ) ) {
+		if ( ! bp_is_active( 'groups' ) || ! bp_is_active( 'xprofile' ) ) {
+			return;
+		}
+
+		// Let's prevent some conflicts
+		if ( class_exists( 'BP_MT_Extended' ) ) {
 			return;
 		}
 
@@ -73,13 +78,19 @@ class CF_BG_Restrictions {
 		$this->lang_dir     = trailingslashit( $this->plugin_dir   . 'languages' );
 		$this->includes_dir = trailingslashit( $this->plugin_dir   . 'includes'  );
 		$this->js_url       = trailingslashit( $this->plugin_url   . 'js' );
+
+		// Trick xProfile error messages
+		$this->xprofile_fields   = array();
+		$this->member_type_field = null;
 	}
 
 	public function includes() {
 		require( $this->includes_dir . 'functions.php' );
+		require( $this->includes_dir . 'field.php' );
+		require( $this->includes_dir . 'register.php' );
 
-		if ( ! class_exists( 'BP_MT_Extended' ) ) {
-			require( $this->includes_dir . 'register.php' );
+		if ( is_admin() ) {
+			require( $this->includes_dir . 'migrate.php' );
 		}
 	}
 
