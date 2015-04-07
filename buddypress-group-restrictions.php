@@ -79,8 +79,7 @@ class CF_BG_Restrictions {
 		$this->includes_dir = trailingslashit( $this->plugin_dir   . 'includes'  );
 		$this->js_url       = trailingslashit( $this->plugin_url   . 'js' );
 
-		// Trick xProfile error messages
-		$this->xprofile_fields   = array();
+		// Used to cache the member type field
 		$this->member_type_field = null;
 	}
 
