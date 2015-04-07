@@ -237,7 +237,7 @@ add_action( 'bp_before_group_settings_admin', 'cfbgr_group_restrictions_section'
 /**
  * Filter the list of potential friends that can be invited to the group.
  *
- * @since 1.0.1
+ * @since 1.0.2
  *
  * @param array|bool $friends An array of friends available to invite or false if none available.
  * @param int $user_id ID of the user doing the inviting.
@@ -272,6 +272,11 @@ function cfbgr_filter_group_invite_list( $friends, $user_id, $group_id ) {
 		}
 
 	}
+
+	// If there's nobody to invite, return false.
+	if ( empty( $invites ) )
+		$invites = false;
+
 	return $invites;
 }
 add_filter( 'bp_friends_get_invite_list', 'cfbgr_filter_group_invite_list', 10, 3 );
