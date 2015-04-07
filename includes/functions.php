@@ -380,7 +380,6 @@ function cfbgr_update_options_description( $field = null ) {
 					// WHERE sanitization format
 					array(
 						'%d',
-						'%s',
 					)
 				);
 			}
@@ -421,49 +420,6 @@ function cfbgr_set_xprofile_member_types_field( $field = null ) {
 }
 add_action( 'xprofile_fields_saved_field', 'cfbgr_set_xprofile_member_types_field', 10, 1 );
 
-
-function cfbgr_saved_xprofile_fields( $field = null ) {
-	$bp = buddypress();
-
-	if ( ! empty( $field->field_id ) ) {
-		$bp->groups->restrictions->xprofile_fields['saved'][] = $field->field_id;
-	}
-}
-
-/**
- * Intercept errors possibly caused by the member type xProfile field
- *
- * As this field is never saved into the xProfile field data table, BuddyPress
- * is logically generating an error. Here we're checking it's the only one and if
- * so trick BuddyPress feedback messages to inform everything went good.
- *
- * @param  int $user_id
- * @param  array $posted_field_ids
- * @param  bool $errors
- */
-function cfbgr_updated_xprofile_fields( $user_id, $posted_field_ids, $errors ) {
-	$bp = buddypress();
-
-	if ( empty( $errors ) ) {
-		return;
-	}
-
-	// No errors with regular fields, so we can trick the error message are our field will constantly generate an error (which is not!)
-	if ( ! array_diff( $bp->groups->restrictions->xprofile_fields['saved'], $bp->groups->restrictions->xprofile_fields['to_save'] ) ) {
-
-		if ( is_admin() ) {
-			$redirect_to = remove_query_arg( array( 'action', 'error', 'updated', 'spam', 'ham', 'delete_avatar' ), $_SERVER['REQUEST_URI'] );
-			$redirect_to = add_query_arg( 'updated', '1', $redirect_to );
-		} else {
-			bp_core_add_message( __( 'Changes saved.', 'buddypress-group-restrictions' ) );
-			$redirect_to = trailingslashit( bp_displayed_user_domain() . buddypress()->profile->slug . '/edit/group/' . bp_action_variable( 1 ) );
-		}
-
-		bp_core_redirect( $redirect_to );
-	}
-}
-add_action( 'xprofile_updated_profile', 'cfbgr_updated_xprofile_fields', 10, 3 );
-
 /**
  * Each time a field will be saved we need to check if it's
  * not our member type field type...
@@ -471,11 +427,6 @@ add_action( 'xprofile_updated_profile', 'cfbgr_updated_xprofile_fields', 10, 3 )
  * @param  BP_XProfile_Field $field
  */
 function cfbgr_save_xprofile_as_member_type( $field = null ) {
-	$bp = buddypress();
-
-	if ( empty( $bp->groups->restrictions->xprofile_fields ) ) {
-		$bp->groups->restrictions->xprofile_fields = array( 'to_save' => array() );
-	}
 
 	if ( ! empty( $field->user_id ) && ! empty( $field->field_id ) ) {
 
@@ -490,18 +441,6 @@ function cfbgr_save_xprofile_as_member_type( $field = null ) {
 
 			// Save the member type for the user.
 			bp_set_member_type( $field->user_id, $member_type );
-
-			// BuddyPress: i make you believe this field is not valid
-			// so that you don't save it as a profile field
-			add_filter( 'xprofile_data_is_valid_field', '__return_false' );
-		} else {
-			$bp->groups->restrictions->xprofile_fields['to_save'][] = $field->field_id;
-
-			// We need to intercept the regular fields
-			add_action( 'xprofile_data_after_save', 'cfbgr_saved_xprofile_fields', 10, 1 );
-
-			// This fields will take the regular validation road
-			remove_filter( 'xprofile_data_is_valid_field', '__return_false' );
 		}
 	}
 }

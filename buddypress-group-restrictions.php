@@ -3,7 +3,7 @@
  * Plugin Name: BuddyPress Group Restrictions
  * Plugin URI: https://github.com/CFCommunity-net/buddypress-group-restrictions
  * Description: Restrict group access according to member type.
- * Version: 1.0.1
+ * Version: 1.0.2
  * Author: Henry Wright
  * Contributors: imath, bowromir
  * Author URI: http://about.me/henrywright

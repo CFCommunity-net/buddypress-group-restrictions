@@ -148,7 +148,7 @@ class CF_BG_Member_Type_Field_Type extends BP_XProfile_Field_Type_Selectbox {
 
 	/**
 	 * If the current field is a Member type, add a new UI to set options description
-	 * 
+	 *
 	 * @param  BP_XProfile_Field $current_field
 	 * @param  string            $control_type
 	 */
@@ -156,7 +156,7 @@ class CF_BG_Member_Type_Field_Type extends BP_XProfile_Field_Type_Selectbox {
 		parent::admin_new_field_html( $current_field, 'radio' );
 
 		$type = array_search( get_class( $this ), bp_xprofile_get_field_types() );
-		
+
 		if ( $current_field->type != $type ) {
 			return;
 		}
@@ -167,8 +167,8 @@ class CF_BG_Member_Type_Field_Type extends BP_XProfile_Field_Type_Selectbox {
 				<?php
 
 				// Get the existing options ?
-				$options = $current_field->get_children( true ); 
-				
+				$options = $current_field->get_children( true );
+
 				if ( empty( $options ) ) {
 					?>
 					<p class="description"><?php esc_html_e( 'This part is not dynamic, you need to first save the options above before being able to describe them.', 'buddypress-group-restrictions' ); ?></p>
@@ -190,6 +190,26 @@ class CF_BG_Member_Type_Field_Type extends BP_XProfile_Field_Type_Selectbox {
 			</div>
 		</div>
 		<?php
+	}
+
+	/**
+	 * Fields are saved using the Member type slug
+	 * We need to make sure to display its singular name
+	 *
+	 * @param  string $value the member type slug
+	 * @return string        the member type singular name
+	 */
+	public static function display_filter( $value ) {
+		$member_type_object = bp_get_member_type_object( $value );
+
+		if ( ! $member_type_object ) {
+			return false;
+		} else {
+			$value = $member_type_object->labels['singular_name'];
+		}
+
+
+		return esc_html( $value );
 	}
 }
 
