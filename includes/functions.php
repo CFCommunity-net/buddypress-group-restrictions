@@ -235,6 +235,48 @@ add_action( 'bp_before_group_settings_creation_step', 'cfbgr_group_restrictions_
 add_action( 'bp_before_group_settings_admin', 'cfbgr_group_restrictions_section' );
 
 /**
+ * Filter the list of potential friends that can be invited to the group.
+ *
+ * @since 1.0.1
+ *
+ * @param array|bool $friends An array of friends available to invite or false if none available.
+ * @param int $user_id ID of the user doing the inviting.
+ * @param int $group_id ID of the group being checked.
+ * @return array
+ */
+function cfbgr_filter_group_invite_list( $friends, $user_id, $group_id ) {
+
+	// Get the group restriction type.
+	$restriction_type = groups_get_groupmeta( bp_get_current_group_id(), 'cf-buddypress-group-restrictions' );
+
+	// Bail if the group is unrestricted.
+	if ( empty( $restriction_type ) ) {
+		return $friends;
+	}
+
+	$invites = array();
+
+	foreach ( $friends as $friend ) {
+
+		// Get member type data.
+		$member_type = bp_get_member_type( $friend['id'] );
+
+		// Check if the restriction and member types match.
+		if ( $member_type === $restriction_type ) {
+
+			// Add this user to the invites array.
+			$invites[] = array(
+				'id'        => $friend['id'],
+				'full_name' => bp_core_get_user_displayname( $friend['id'] )
+			);
+		}
+
+	}
+	return $invites;
+}
+add_filter( 'bp_friends_get_invite_list', 'cfbgr_filter_group_invite_list', 10, 3 );
+
+/**
  * Process restriction data captured in the form.
  *
  * @since 1.0.0
