@@ -282,6 +282,29 @@ function cfbgr_filter_group_invite_list( $friends, $user_id, $group_id ) {
 add_filter( 'bp_friends_get_invite_list', 'cfbgr_filter_group_invite_list', 10, 3 );
 
 /**
+ * Output a restriction message for each group in the loop.
+ *
+ * @since 1.0.2
+ */
+function cfbgr_group_loop_item_restriction_message() {
+
+	// Get group restriction data.
+	$restriction_type = groups_get_groupmeta( bp_get_group_id(), 'cf-buddypress-group-restrictions' );
+
+	// Exit early if the group isn't restricted.
+	if ( empty( $restriction_type ) )
+		return;
+
+	// Get the name of the group.
+	$group_name = bp_get_group_name();
+
+	?>
+	<p><?php printf( __( '%s is open to %s members only.', 'buddypress-group-restrictions' ), $group_name, $restriction_type ); ?></p>
+	<?php
+}
+add_action( 'bp_directory_groups_item', 'cfbgr_group_loop_item_restriction_message' );
+
+/**
  * Process restriction data captured in the form.
  *
  * @since 1.0.0
