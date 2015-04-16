@@ -299,7 +299,7 @@ function cfbgr_group_loop_item_restriction_message() {
 	$group_name = bp_get_group_name();
 
 	?>
-	<p><?php printf( __( '%s is open to %s members only.', 'buddypress-group-restrictions' ), $group_name, $restriction_type ); ?></p>
+	<p class="group-restriction-notice"><?php printf( __( '%s is open to %s members only.', 'buddypress-group-restrictions' ), $group_name, $restriction_type ); ?></p>
 	<?php
 }
 add_action( 'bp_directory_groups_item', 'cfbgr_group_loop_item_restriction_message' );
