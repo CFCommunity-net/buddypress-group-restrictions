@@ -307,6 +307,32 @@ function cfbgr_group_loop_item_restriction_message() {
 add_action( 'bp_directory_groups_actions', 'cfbgr_group_loop_item_restriction_message' );
 
 /**
+ * Output the restriction rules on the Single Group pages
+ *
+ * @since 1.0.2
+ */
+function cfbgr_group_single_item_restriction_message() {
+
+	// Get group restriction data.
+	$restriction_type = groups_get_groupmeta( bp_get_group_id(), 'cf-buddypress-group-restrictions' );
+
+	// Exit early if the group isn't restricted.
+	if ( empty( $restriction_type ) )
+		return;
+
+	// Get the name of the group.
+	$group_name = bp_get_group_name();
+
+	?>
+	<div class="group-restriction-notice single-group-restriction-notice">
+		<?php printf( __( 'This group is open to %s members only.', 'buddypress-group-restrictions' ), $restriction_type ); ?>
+	</div>
+	<?php
+}
+add_action( 'bp_group_header_actions', 'cfbgr_group_single_item_restriction_message' );
+
+
+/**
  * Process restriction data captured in the form.
  *
  * @since 1.0.0
