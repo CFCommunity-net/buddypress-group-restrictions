@@ -319,10 +319,6 @@ function cfbgr_group_single_item_restriction_message() {
 	// Exit early if the group isn't restricted.
 	if ( empty( $restriction_type ) )
 		return;
-
-	// Get the name of the group.
-	$group_name = bp_get_group_name();
-
 	?>
 	<div class="group-restriction-notice single-group-restriction-notice">
 		<?php printf( __( 'This group is open to %s members only.', 'buddypress-group-restrictions' ), $restriction_type ); ?>
